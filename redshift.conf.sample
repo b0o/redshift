@@ -9,6 +9,13 @@ temp-night=3500
 ; 1 will gradually apply the new screen temperature over a couple of seconds.
 fade=1
 
+; Set the amount by which to reduce the brightness when Redshift is in dim mode,
+; toggled upon receiving the SIGUSR2 signal.
+; This value is subtracted from the active brightness, e.g. if dimmed at night:
+; brightness-night - dim-amount = dim-brightness
+;              0.4 -        0.2 =            0.2
+dim-amount=0.2
+
 ; Solar elevation thresholds.
 ; By default, Redshift will use the current elevation of the sun to determine
 ; whether it is daytime, night or in transition (dawn/dusk). When the sun is

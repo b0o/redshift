@@ -49,6 +49,7 @@
 /* Default values for parameters. */
 #define DEFAULT_DAY_TEMP    6500
 #define DEFAULT_NIGHT_TEMP  4500
+#define DEFAULT_DIM          0.2
 #define DEFAULT_BRIGHTNESS   1.0
 #define DEFAULT_GAMMA        1.0
 
@@ -193,7 +194,8 @@ print_help(const char *program_name)
 		" color effect\n"
 		"  -x\t\tReset mode (remove adjustment from screen)\n"
 		"  -r\t\tDisable fading between color temperatures\n"
-		"  -t DAY:NIGHT\tColor temperature to set at daytime/night\n"),
+		"  -t DAY:NIGHT\tColor temperature to set at daytime/night\n"
+		"  -d DIM\tAmount to dim brightness by after receiving SIGUSR2\n"),
 	      stdout);
 	fputs("\n", stdout);
 
@@ -321,6 +323,7 @@ options_init(options_t *options)
 
 	options->use_fade = -1;
 	options->preserve_gamma = 1;
+	options->dim_amount = NAN;
 	options->mode = PROGRAM_MODE_CONTINUAL;
 	options->verbose = 0;
 }
@@ -456,6 +459,9 @@ parse_command_line_option(
 	case 'r':
 		options->use_fade = 0;
 		break;
+	case 'd':
+		options->dim_amount = atof(value);
+		break;
 	case 't':
 		s = strchr(value, ':');
 		if (s == NULL) {
@@ -495,7 +501,7 @@ options_parse_args(
 {
 	const char* program_name = argv[0];
 	int opt;
-	while ((opt = getopt(argc, argv, "b:c:g:hl:m:oO:pPrt:vVx")) != -1) {
+	while ((opt = getopt(argc, argv, "b:c:g:hl:m:oO:pPrd:t:vVx")) != -1) {
 		char option = opt;
 		int r = parse_command_line_option(
 			option, optarg, options, program_name, gamma_methods,
@@ -525,6 +531,10 @@ parse_config_file_option(
 		   deprecated as the setting key. */
 		if (options->use_fade < 0) {
 			options->use_fade = !!atoi(value);
+		}
+	} else if (strcasecmp(key, "dim-amount") == 0) {
+		if (isnan(options->dim_amount)) {
+			options->dim_amount = atof(value);
 		}
 	} else if (strcasecmp(key, "brightness") == 0) {
 		if (isnan(options->scheme.day.brightness)) {
@@ -673,6 +683,10 @@ options_set_defaults(options_t *options)
 		options->scheme.night.gamma[0] = DEFAULT_GAMMA;
 		options->scheme.night.gamma[1] = DEFAULT_GAMMA;
 		options->scheme.night.gamma[2] = DEFAULT_GAMMA;
+	}
+
+	if (isnan(options->dim_amount)) {
+		options->dim_amount = DEFAULT_DIM;
 	}
 
 	if (options->use_fade < 0) options->use_fade = 1;

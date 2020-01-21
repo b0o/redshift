@@ -81,6 +81,9 @@ Disable fading between color temperatures.
 .TP
 \fB\-t\fR \fIDAY\fB:\fINIGHT\fR
 Color temperature to set at daytime/night.
+.TP
+\fB\-d\fR \fIDIM\fR
+Amount to dim brightness by after receiving SIGUSR2.
 .PP
 The neutral temperature is 6500K. Using this value will not
 change the color temperature of the display. Setting the
@@ -109,6 +112,9 @@ Night temperature
 \fBfade\fR = \fI0 or 1\fR
 Disable or enable fading between color temperatures when Redshift starts or
 stops
+.TP
+\fBdim-amount\fR = \fI0.0\-0.9\fR
+Amount to dim brightness by after receiving SIGUSR2.
 .TP
 \fBbrightness\-day\fR = \fI0.1\-1.0\fR
 Screen brightness at daytime

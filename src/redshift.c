@@ -124,13 +124,15 @@ int poll(struct pollfd *fds, int nfds, int timeout) { abort(); return -1; }
 #define MAX_BRIGHTNESS  1.0
 #define MIN_GAMMA   0.1
 #define MAX_GAMMA  10.0
+#define MIN_DIM  0.0
+#define MAX_DIM  0.9
 
 /* Duration of sleep between screen updates (milliseconds). */
 #define SLEEP_DURATION        5000
-#define SLEEP_DURATION_SHORT  100
+#define SLEEP_DURATION_SHORT  30
 
 /* Length of fade in numbers of short sleep durations. */
-#define FADE_LENGTH  40
+#define FADE_LENGTH  10
 
 
 /* Names of periods of day */
@@ -607,7 +609,8 @@ run_continual_mode(const location_provider_t *provider,
 		   const transition_scheme_t *scheme,
 		   const gamma_method_t *method,
 		   gamma_state_t *method_state,
-		   int use_fade, int preserve_gamma, int verbose)
+		   int use_fade, float dim_amount,
+		   int preserve_gamma, int verbose)
 {
 	int r;
 
@@ -664,13 +667,21 @@ run_continual_mode(const location_provider_t *provider,
 	/* Continuously adjust color temperature */
 	int done = 0;
 	int prev_disabled = 1;
+	int prev_dimmed = 1;
 	int disabled = 0;
+	int dimmed = 0;
 	int location_available = 1;
 	while (1) {
 		/* Check to see if disable signal was caught */
 		if (disable && !done) {
 			disabled = !disabled;
 			disable = 0;
+		}
+
+		/* Check to see if disable signal was caught */
+		if (dim && !done) {
+			dimmed = !dimmed;
+			dim = 0;
 		}
 
 		/* Check to see if exit signal was caught */
@@ -686,12 +697,19 @@ run_continual_mode(const location_provider_t *provider,
 		}
 
 		/* Print status change */
-		if (verbose && disabled != prev_disabled) {
-			printf(_("Status: %s\n"), disabled ?
-			       _("Disabled") : _("Enabled"));
+		if (verbose) {
+			if (disabled != prev_disabled) {
+				printf(_("Status: %s\n"), disabled ?
+				       _("Disabled") : _("Enabled"));
+			}
+			if (dimmed != prev_dimmed) {
+				printf(_("Dimmed: %s\n"), dimmed ?
+				       _("True") : _("False"));
+			}
 		}
 
 		prev_disabled = disabled;
+		prev_dimmed = dimmed;
 
 		/* Read timestamp */
 		double now;
@@ -747,6 +765,15 @@ run_continual_mode(const location_provider_t *provider,
 		/* Activate hooks if period changed */
 		if (period != prev_period) {
 			hooks_signal_period_change(prev_period, period);
+		}
+
+		/* Handle dimming */
+		if (dimmed != 0) {
+			float b = target_interp.brightness - dim_amount;
+			if (b < MIN_BRIGHTNESS) {
+				b = MIN_BRIGHTNESS;
+			}
+			target_interp.brightness = b;
 		}
 
 		/* Start fade if the parameter differences are too big to apply
@@ -1093,10 +1120,21 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* Dim */
+	if (options.dim_amount < MIN_DIM ||
+	    options.dim_amount > MAX_DIM) {
+		fprintf(stderr,
+			_("Dim amount must be between %.1f and %.1f.\n"),
+			MIN_DIM, MAX_DIM);
+		exit(EXIT_FAILURE);
+	}
+
 	if (options.verbose) {
 		printf(_("Brightness: %.2f:%.2f\n"),
 		       options.scheme.day.brightness,
 		       options.scheme.night.brightness);
+		printf(_("Dim Amount: %.2f\n"),
+		       options.dim_amount);
 	}
 
 	/* Gamma */
@@ -1312,8 +1350,8 @@ main(int argc, char *argv[])
 		r = run_continual_mode(
 			options.provider, location_state, scheme,
 			options.method, method_state,
-			options.use_fade, options.preserve_gamma,
-			options.verbose);
+			options.use_fade, options.dim_amount,
+			options.preserve_gamma, options.verbose);
 		if (r < 0) exit(EXIT_FAILURE);
 	}
 	break;

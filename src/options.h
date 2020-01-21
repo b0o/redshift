@@ -36,6 +36,8 @@ typedef struct {
 	int use_fade;
 	/* Whether to preserve gamma ramps if supported by gamma method. */
 	int preserve_gamma;
+	/* Amount to decrease brightness by when dimmed */
+	float dim_amount;
 
 	/* Selected gamma method. */
 	const gamma_method_t *method;
